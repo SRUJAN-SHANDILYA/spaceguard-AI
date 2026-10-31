@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpaceGuard AI</title>
+<meta name="description" content="Space domain awareness prototype: orbital surveillance, collision-risk prediction and decision support.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>SpaceGuard AI</h1>
+      <p>Space domain awareness and orbital threat monitoring</p>
+    </div>
+    <div class="top-right">
+      <div class="clock">
+        <span class="lab">Simulation time</span>
+        <span class="mono" id="clockT">T+00:00:00</span>
+        <span class="mono dim" id="clockU" style="font-size:12px">31 Oct 2026 00:00 UTC</span>
+      </div>
+      <button class="btn" id="themeBtn" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </header>
+
+  <div class="notice"><span class="chip">Simulated</span><span>Orbits, debris and anomalies here are generated for demonstration. Risk and response results come from transparent rules, not a trained threat-detection model.</span></div>
+
+  <nav class="tabs" role="tablist" aria-label="Modules">
+    <button class="tab" role="tab" id="t-explorer" data-tab="explorer" aria-selected="true"><span class="n">1</span>Orbital Surveillance Explorer</button>
+    <button class="tab" role="tab" id="t-collision" data-tab="collision" aria-selected="false"><span class="n">2</span>Collision Risk Predictor</button>
+    <button class="tab" role="tab" id="t-decision" data-tab="decision" aria-selected="false"><span class="n">3</span>Space Defence Decision Centre</button>
+    <button class="tab" role="tab" id="t-method" data-tab="method" aria-selected="false">Method and limits</button>
+  </nav>
+
+  <!-- MODULE 1 -->
+  <section id="p-explorer" role="tabpanel" aria-labelledby="t-explorer">
+    <div class="ex-grid">
+      <div class="stack">
+        <div class="toolbar">
+          <div class="seg" id="viewSeg" role="group" aria-label="View range">
+            <button type="button" data-k="2.3" aria-pressed="true">LEO</button>
+            <button type="button" data-k="4.8" aria-pressed="false">MEO</button>
+            <button type="button" data-k="7.4" aria-pressed="false">GEO</button>
+          </div>
+          <button class="btn" id="playBtn" type="button">Pause</button>
+          <label>Speed
+            <select id="speedSel">
+              <option value="1">1×</option><option value="10">10×</option><option value="60" selected>60×</option><option value="300">300×</option><option value="1200">1200×</option>
+            </select>
+          </label>
+          <button class="btn" id="resetBtn" type="button">Reset time</button>
+        </div>
+        <div class="stage"><canvas id="globe" aria-label="Interactive 3D view of satellites and debris around Earth"></canvas><div class="hint">Drag to rotate. Scroll or pinch to zoom. Click an object to inspect it.</div></div>
+        <div class="legend" id="clsLegend" aria-label="Object classes"></div>
+        <div class="legend" id="regLegend" aria-label="Orbit regimes"></div>
+      </div>
+      <aside class="side">
+        <div class="panel"><h2>Object inspector</h2><div id="inspBody"></div></div>
+        <div class="panel"><h2>Catalogue</h2><input type="search" id="search" placeholder="Search by ID, e.g. SG-NAV or DEB" aria-label="Search catalogue"><div class="list" id="objList"></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- MODULE 2 -->
+  <section id="p-collision" role="tabpanel" aria-labelledby="t-collision" hidden>
+    <div class="cp-grid">
+      <aside class="panel">
+        <h2>Scenario</h2>
+        <div class="presets" id="presets"></div>
+        <div class="field"><span class="lab">Primary asset</span><select id="cpPrim"></select></div>
+        <div class="field"><span class="lab">Secondary object</span><select id="cpSec"></select></div>
+        <div class="field"><span class="lab">Screening window</span>
+          <select id="cpWin"><option value="6">Next 6 hours</option><option value="12" selected>Next 12 hours</option><option value="24">Next 24 hours</option></select></div>
+        <hr class="sep">
+        <h2>Risk thresholds</h2>
+        <div class="field"><span class="lab">Red miss distance <output id="oRedD"></output></span><input type="range" id="cpRedD" min="0.1" max="10" step="0.1" value="1"></div>
+        <div class="field"><span class="lab">Amber miss distance <output id="oAmberD"></output></span><input type="range" id="cpAmberD" min="1" max="50" step="0.5" value="5"></div>
+        <div class="field"><span class="lab">Red probability <output id="oRedPc"></output></span><input type="range" id="cpRedPc" min="-7" max="-2" step="1" value="-4"></div>
+        <div class="field"><span class="lab">Amber probability <output id="oAmberPc"></output></span><input type="range" id="cpAmberPc" min="-8" max="-3" step="1" value="-5"></div>
+        <div class="field"><span class="lab">Position uncertainty, 1σ <output id="oSigma"></output></span><input type="range" id="cpSigma" min="50" max="2000" step="25" value="200"></div>
+        <div class="field"><span class="lab">Combined object radius <output id="oHbr"></output></span><input type="range" id="cpHbr" min="1" max="50" step="1" value="10"></div>
+      </aside>
+      <div class="stack" id="cpMain">
+        <div class="panel" id="cpBanner"></div>
+        <div class="panel"><h2>Close approaches in window</h2><div class="approach" id="cpList"></div><p class="note">Every local minimum of the separation is refined to the exact time of closest approach. The closest five are listed.</p></div>
+        <div class="cmp" id="cpCards"></div>
+        <div class="plots">
+          <div class="panel"><h2>Separation around closest approach</h2><canvas class="plot" id="plotSep" aria-label="Separation versus time on a logarithmic scale"></canvas></div>
+          <div class="panel"><h2>Encounter plane</h2><canvas class="plot" id="plotEnc" aria-label="Miss vector and uncertainty in the encounter plane"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>Avoidance manoeuvre</h2>
+          <div class="toolbar" style="align-items:flex-end;gap:10px 18px">
+            <div class="field" style="margin:0;min-width:150px"><span class="lab">Direction</span>
+              <select id="cpDir"><option value="prograde">Prograde (along track)</option><option value="retrograde">Retrograde</option><option value="radial">Radial out</option><option value="normal">Normal (cross track)</option><option value="antinormal">Anti-normal</option></select></div>
+            <div class="field" style="margin:0;min-width:200px;flex:1"><span class="lab">Delta-v <output id="oDv"></output></span><input type="range" id="cpDv" min="0" max="1" step="0.01" value="0"></div>
+            <div class="field" style="margin:0;min-width:150px"><span class="lab">Burn lead before closest approach</span>
+              <select id="cpLead"><option value="0.5">0.5 orbit</option><option value="1">1 orbit</option><option value="2" selected>2 orbits</option><option value="3">3 orbits</option><option value="4">4 orbits</option></select></div>
+          </div>
+          <hr class="sep">
+          <h2>Option comparison</h2>
+          <div class="tbl"><table class="data" id="optTbl"></table></div>
+          <p class="note" id="optNote"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULE 3 -->
+  <section id="p-decision" role="tabpanel" aria-labelledby="t-decision" hidden>
+    <div class="dc-grid">
+      <aside class="panel"><h2>Simulated anomaly feed</h2><div class="events" id="evList"></div><p class="note">Eight recorded events with scripted telemetry. Change a slider on the right to see how the classification and the ranking respond.</p></aside>
+      <div class="stack" id="dcMain"></div>
+    </div>
+  </section>
+
+  <!-- METHOD -->
+  <section id="p-method" role="tabpanel" aria-labelledby="t-method" hidden>
+    <div class="stack">
+      <div class="panel"><h2>Project summary</h2>
+        <p class="pitch">SpaceGuard AI is an interactive space domain awareness prototype. It combines an orbital visualisation, a collision-risk simulation engine and an event-monitoring dashboard to show how monitoring, risk assessment and decision support can sit in one interface.</p></div>
+      <div class="method">
+        <div class="panel"><h2>What is computed for real</h2><ul>
+          <li>Two-body Keplerian propagation for every object, solved with Newton iteration on Kepler's equation.</li>
+          <li>Conjunction screening: separation is sampled every 20 s over the window, then each local minimum is refined to the exact time of closest approach.</li>
+          <li>Collision probability from a simplified isotropic Gaussian model: <div class="eq">Pc ≈ (R² / 2σ²) · exp(−d² / 2σ²)</div> with R the combined object radius, σ the position uncertainty and d the miss distance.</li>
+          <li>Manoeuvres are applied as an impulsive delta-v in the radial, along-track and cross-track frame, converted back to orbital elements and re-screened.</li>
+        </ul></div>
+        <div class="panel"><h2>What is simulated</h2><ul>
+          <li>The catalogue of about 250 objects is generated from a fixed random seed with realistic orbit families: sun-synchronous, a 550 km shell, navigation orbits, geostationary belt and a debris cloud.</li>
+          <li>Three conjunction scenarios are constructed so the demo has known close approaches. Their secondary objects are marked as scenario objects in the inspector.</li>
+          <li>Anomaly telemetry is scripted. The classifier and the response ranking are rule-based and every rule is shown on screen.</li>
+        </ul></div>
+        <div class="panel"><h2>Known limits</h2><ul>
+          <li>No J2 oblateness, drag or solar radiation pressure, so positions drift from reality after hours.</li>
+          <li>Uncertainty is a single isotropic number. Real conjunction assessment uses full covariance matrices from tracking data.</li>
+          <li>Altitude uses a spherical Earth. The Earth texture is a graticule only.</li>
+          <li>Nothing here is a trained model, and nothing here is an operational defence system.</li>
+        </ul></div>
+        <div class="panel"><h2>Next steps</h2><ul>
+          <li>Load real two-line element sets from CelesTrak and propagate with SGP4.</li>
+          <li>Replace the isotropic Pc with a two-dimensional encounter-plane integral using covariance from conjunction data messages.</li>
+          <li>Add J2 and drag, then compare against reference ephemerides.</li>
+          <li>Train an anomaly classifier on labelled telemetry and benchmark it against the rule set shown here.</li>
+          <li>Add multi-satellite constellation planning for avoidance manoeuvres.</li>
+        </ul></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
